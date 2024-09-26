@@ -51,6 +51,8 @@ def obtener_analisis_together(search_summary, api_key):
                 "Proporciona una evaluación detallada del potencial de éxito de la plataforma digital basada en la siguiente información. "
                 "Incluye recomendaciones sobre aspectos de forma (diseño, usabilidad, interfaz) y fondo (funcionalidades, contenido, estrategia de mercado), señalando lo que sobra y lo que falta. "
                 "Además, expresa el potencial de éxito en términos de porcentaje, proporciona una estimación del máximo de visitantes al día y un resumen ejecutivo de los hallazgos clave."
+                "\n\n"
+                "Nota: La estimación de visitantes diarios se basa en la versión mejorada de la plataforma, incorporando los cambios sugeridos."
             )
         },
         {
@@ -191,6 +193,7 @@ if st.button("✅ Analizar"):
                     est_visitors_val = parse_number(contenido)
                     if est_visitors_val is not None:
                         est_visitors_val = int(est_visitors_val)
+                        st.markdown("**La estimación de visitantes diarios se basa en la versión mejorada de la plataforma, incorporando los cambios sugeridos.**")
                         st.metric(label="Máximo de Visitantes al Día", value=f"{est_visitors_val:,}")
                         fig, ax = plt.subplots(figsize=(4, 1))
                         ax.barh([''], [est_visitors_val], color='#4CAF50')

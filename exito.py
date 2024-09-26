@@ -162,4 +162,6 @@ if st.button("✅ Analizar"):
                             del secciones["Potencial de Éxito"]
 
                         # Agregar Estimación de Visitantes Diarios
-                        if "Estimación de Visitantes Dia
+                        if "Estimación de Visitantes Diarios" in secciones:
+                            est_visitors_text = secciones["Estimación de Visitantes Diarios"]
+                            est_visitors_match = re.search(r'(\d[\d,\.]*)\s*visitantes al día', es

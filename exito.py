@@ -116,6 +116,10 @@ if st.button("✅ Analizar"):
                     if "choices" in analysis and len(analysis["choices"]) > 0:
                         result = analysis["choices"][0]["message"]["content"]
 
+                        # Opcional: Mostrar la respuesta completa para depuración
+                        st.subheader("📄 Respuesta de la API de Together")
+                        st.write(result)
+
                         # Separar el análisis en secciones utilizando títulos en negrita
                         secciones = {}
                         current_section = None
@@ -129,6 +133,10 @@ if st.button("✅ Analizar"):
                                 current_section = section_title
                             elif current_section:
                                 secciones[current_section] += line + "\n"
+
+                        # Depuración: Mostrar las secciones detectadas
+                        st.subheader("🔍 Secciones Detectadas")
+                        st.write(secciones.keys())
 
                         # Crear un documento DOCX
                         doc = Document()
@@ -209,7 +217,6 @@ if st.button("✅ Analizar"):
                             st.subheader(f"📌 {titulo}")
                             st.write(contenido)
 
-                        # Opcional: Permitir al usuario descargar el análisis completo
                         # Crear un buffer para el archivo DOCX
                         buffer = BytesIO()
                         doc.save(buffer)

@@ -4,8 +4,7 @@ from urllib.parse import urlparse
 import matplotlib.pyplot as plt
 import re
 from io import BytesIO
-from fpdf import FPDF
-from PIL import Image
+import pyperclip  # Para copiar al portapapeles
 
 # Función para parsear números con diferentes formatos
 def parse_number(text):
@@ -83,37 +82,6 @@ def obtener_analisis_together(search_summary, api_key):
     else:
         raise ValueError("Respuesta inesperada de Together API.")
 
-# Función para generar el PDF
-def generar_pdf(secciones, plots):
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 10, "Análisis de Potencial de Éxito", ln=True, align='C')
-    pdf.ln(10)
-
-    for titulo, contenido in secciones.items():
-        pdf.set_font("Arial", 'B', 14)
-        pdf.multi_cell(0, 10, f"{titulo}")
-        pdf.set_font("Arial", '', 12)
-        pdf.multi_cell(0, 10, contenido)
-        pdf.ln(5)
-
-        # Incluir gráfica si existe
-        if titulo in plots:
-            img_buffer = plots[titulo]
-            img = Image.open(img_buffer)
-            img_path = f"{titulo}.png"
-            img.save(img_path)
-            pdf.image(img_path, w=pdf.epw)
-            pdf.ln(10)
-
-    # Guardar el PDF en un buffer
-    buffer = BytesIO()
-    pdf.output(buffer)
-    buffer.seek(0)
-    return buffer
-
 # Función para generar las gráficas y retornarlas como buffers
 def generar_graficas(secciones):
     plots = {}
@@ -125,7 +93,7 @@ def generar_graficas(secciones):
             ax.pie([porcentaje_val, 100 - porcentaje_val], colors=['#4CAF50', '#CCCCCC'], startangle=90, counterclock=False)
             ax.axis('equal')
             buf = BytesIO()
-            plt.savefig(buf, format='png')
+            plt.savefig(buf, format='png', bbox_inches='tight')
             plt.close(fig)
             buf.seek(0)
             plots["Potencial de Éxito"] = buf
@@ -142,12 +110,15 @@ def generar_graficas(secciones):
             ax.set_yticks([])
             plt.tight_layout()
             buf = BytesIO()
-            plt.savefig(buf, format='png')
+            plt.savefig(buf, format='png', bbox_inches='tight')
             plt.close(fig)
             buf.seek(0)
             plots["Estimación de Visitantes Diarios"] = buf
 
     return plots
+
+# Función para generar el PDF (Eliminada)
+# Se ha removido toda la funcionalidad relacionada con la generación de PDF.
 
 # Título de la aplicación
 st.title("📈 Análisis de Potencial de Éxito de Plataformas Digitales")
@@ -269,13 +240,24 @@ if st.button("✅ Analizar"):
                             st.markdown("**La estimación de visitantes diarios se basa en la versión mejorada de la plataforma, incorporando los cambios sugeridos.**")
                             st.metric(label="Máximo de Visitantes al Día", value=f"{est_visitors_val:,}")
 
-        # Generar el PDF
-        pdf_buffer = generar_pdf(secciones, plots)
+        # Generar el texto completo del análisis para copiar
+        analisis_completo = ""
+        for titulo, contenido in secciones.items():
+            analisis_completo += f"**{titulo}:**\n{contenido}\n\n"
 
-        # Botón para descargar el PDF
-        st.download_button(
-            label="📥 Descargar Análisis en PDF",
-            data=pdf_buffer,
-            file_name="analisis_plataforma.pdf",
-            mime="application/pdf"
-        )
+        # Botón para copiar el análisis al portapapeles
+        # Utilizaremos pyperclip para copiar el texto. Sin embargo, pyperclip puede no funcionar en entornos web como Streamlit.
+        # Por lo tanto, proporcionaremos el análisis en un área de texto para que el usuario lo copie manualmente.
+        st.subheader("📋 Copiar Análisis")
+        st.text_area("Análisis Completo", analisis_completo, height=300)
+
+        st.info("Puedes copiar el análisis completo desde el área de texto de arriba.")
+
+        # Alternativamente, si deseas utilizar un botón de copiar con JavaScript, puedes hacerlo mediante componentes personalizados.
+        # Aquí te proporciono una forma sencilla utilizando HTML y JavaScript:
+        copy_button_html = f"""
+        <button onclick="navigator.clipboard.writeText(`{analisis_completo}`)" style="background-color:#4CAF50;color:white;padding:10px 20px;border:none;border-radius:5px;cursor:pointer;">
+            📋 Copiar Análisis
+        </button>
+        """
+        st.markdown(copy_button_html, unsafe_allow_html=True)

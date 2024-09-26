@@ -4,10 +4,6 @@ from urllib.parse import urlparse
 import matplotlib.pyplot as plt
 import re
 from io import BytesIO
-from pptx import Presentation
-from pptx.util import Inches, Pt
-from pptx.enum.text import PP_ALIGN
-from PIL import Image
 
 # ============================================
 # Funciones Auxiliares
@@ -133,57 +129,6 @@ def generar_graficas(secciones):
             plots["Estimación de Visitantes Diarios"] = buf
 
     return plots
-
-def generar_pptx(secciones, plots):
-    """
-    Función para generar una presentación de PowerPoint (PPTX) con el análisis y las gráficas.
-    Divide el análisis en varias diapositivas, una por cada sección.
-    Retorna un buffer con el archivo PPTX.
-    """
-    prs = Presentation()
-    
-    # Diseño de diapositiva: Título y contenido
-    slide_layout_title = prs.slide_layouts[0]  # Título
-    slide_layout_content = prs.slide_layouts[1]  # Título y contenido
-
-    # Diapositiva de Título
-    slide_title = prs.slides.add_slide(slide_layout_title)
-    title = slide_title.shapes.title
-    title.text = "Análisis de Potencial de Éxito"
-
-    # Iterar sobre las secciones y añadir diapositivas
-    for titulo, contenido in secciones.items():
-        slide = prs.slides.add_slide(slide_layout_content)
-        title = slide.shapes.title
-        body = slide.placeholders[1]
-
-        title.text = titulo
-
-        # Agregar el contenido de la sección
-        tf = body.text_frame
-        tf.word_wrap = True
-        p = tf.add_paragraph()
-        p.text = contenido
-        p.font.size = Pt(12)
-
-        # Añadir gráfica si existe
-        if titulo in plots:
-            img_buffer = plots[titulo]
-            img = Image.open(img_buffer)
-            img_path = f"{titulo}.png"
-            img.save(img_path)
-
-            # Insertar la imagen en la diapositiva
-            left = Inches(1)
-            top = Inches(3)
-            height = Inches(3)
-            slide.shapes.add_picture(img_path, left, top, height=height)
-
-    # Guardar la presentación en un buffer
-    buffer = BytesIO()
-    prs.save(buffer)
-    buffer.seek(0)
-    return buffer
 
 # ============================================
 # Aplicación Streamlit
@@ -329,18 +274,6 @@ def main():
                             Al implementar las mejoras sugeridas en estos aspectos, se espera que la plataforma digital no solo aumente su atractivo y funcionalidad, sino que también mejore su capacidad para atraer y retener un mayor número de visitantes diarios. La combinación de un diseño optimizado, contenido de calidad, estrategias de marketing efectivas y funcionalidades avanzadas contribuye significativamente a la estimación del número máximo de visitantes diarios.
                             """)
 
-            # Generar la presentación PPTX
-            with st.spinner("📊 Generando presentación PPTX..."):
-                pptx_buffer = generar_pptx(secciones, plots)
-
-            # Botón para descargar el PPTX
-            st.download_button(
-                label="📥 Descargar Análisis en PPTX",
-                data=pptx_buffer,
-                file_name="analisis_plataforma.pptx",
-                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
-            )
-
-# Ejecutar la aplicación
-if __name__ == "__main__":
-    main()
+    # Ejecutar la aplicación
+    if __name__ == "__main__":
+        main()

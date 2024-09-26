@@ -137,25 +137,29 @@ def generar_graficas(secciones):
 def generar_pptx(secciones, plots):
     """
     Función para generar una presentación de PowerPoint (PPTX) con el análisis y las gráficas.
+    Divide el análisis en varias diapositivas, una por cada sección.
     Retorna un buffer con el archivo PPTX.
     """
     prs = Presentation()
     
     # Diseño de diapositiva: Título y contenido
-    slide_layout = prs.slide_layouts[1]  # 0 = Título, 1 = Título y contenido
+    slide_layout_title = prs.slide_layouts[0]  # Título
+    slide_layout_content = prs.slide_layouts[1]  # Título y contenido
 
     # Diapositiva de Título
-    slide_title = prs.slides.add_slide(prs.slide_layouts[0])
+    slide_title = prs.slides.add_slide(slide_layout_title)
     title = slide_title.shapes.title
     title.text = "Análisis de Potencial de Éxito"
 
     # Iterar sobre las secciones y añadir diapositivas
     for titulo, contenido in secciones.items():
-        slide = prs.slides.add_slide(slide_layout)
+        slide = prs.slides.add_slide(slide_layout_content)
         title = slide.shapes.title
-        body = slide.shapes.placeholders[1]
+        body = slide.placeholders[1]
 
         title.text = titulo
+
+        # Agregar el contenido de la sección
         tf = body.text_frame
         tf.word_wrap = True
         p = tf.add_paragraph()
@@ -169,6 +173,7 @@ def generar_pptx(secciones, plots):
             img_path = f"{titulo}.png"
             img.save(img_path)
 
+            # Insertar la imagen en la diapositiva
             left = Inches(1)
             top = Inches(3)
             height = Inches(3)

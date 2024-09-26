@@ -2,3 +2,5 @@ streamlit
 requests
 matplotlib
 streamlit-extras
+matplotlib
+python-docx

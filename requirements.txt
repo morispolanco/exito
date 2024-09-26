@@ -3,5 +3,5 @@ requests
 streamlit-extras
 python-docxstreamlit
 matplotlib
-fpdf2
+fpdf2 
 Pillow

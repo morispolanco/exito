@@ -3,6 +3,9 @@ import requests
 from urllib.parse import urlparse
 import matplotlib.pyplot as plt
 import re
+from io import BytesIO
+from fpdf import FPDF
+from PIL import Image
 
 # Función para parsear números con diferentes formatos
 def parse_number(text):
@@ -79,6 +82,72 @@ def obtener_analisis_together(search_summary, api_key):
         return analysis["choices"][0]["message"]["content"]
     else:
         raise ValueError("Respuesta inesperada de Together API.")
+
+# Función para generar el PDF
+def generar_pdf(secciones, plots):
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(0, 10, "Análisis de Potencial de Éxito", ln=True, align='C')
+    pdf.ln(10)
+
+    for titulo, contenido in secciones.items():
+        pdf.set_font("Arial", 'B', 14)
+        pdf.multi_cell(0, 10, f"{titulo}")
+        pdf.set_font("Arial", '', 12)
+        pdf.multi_cell(0, 10, contenido)
+        pdf.ln(5)
+
+        # Incluir gráfica si existe
+        if titulo in plots:
+            img_buffer = plots[titulo]
+            img = Image.open(img_buffer)
+            img_path = f"{titulo}.png"
+            img.save(img_path)
+            pdf.image(img_path, w=pdf.epw)
+            pdf.ln(10)
+
+    # Guardar el PDF en un buffer
+    buffer = BytesIO()
+    pdf.output(buffer)
+    buffer.seek(0)
+    return buffer
+
+# Función para generar las gráficas y retornarlas como buffers
+def generar_graficas(secciones):
+    plots = {}
+    # Potencial de Éxito
+    if "Potencial de Éxito" in secciones:
+        porcentaje_val = parse_number(secciones["Potencial de Éxito"])
+        if porcentaje_val is not None:
+            fig, ax = plt.subplots(figsize=(2, 2))
+            ax.pie([porcentaje_val, 100 - porcentaje_val], colors=['#4CAF50', '#CCCCCC'], startangle=90, counterclock=False)
+            ax.axis('equal')
+            buf = BytesIO()
+            plt.savefig(buf, format='png')
+            plt.close(fig)
+            buf.seek(0)
+            plots["Potencial de Éxito"] = buf
+
+    # Estimación de Visitantes Diarios
+    if "Estimación de Visitantes Diarios" in secciones:
+        est_visitors_val = parse_number(secciones["Estimación de Visitantes Diarios"])
+        if est_visitors_val is not None:
+            est_visitors_val = int(est_visitors_val)
+            fig, ax = plt.subplots(figsize=(4, 1))
+            ax.barh([''], [est_visitors_val], color='#4CAF50')
+            ax.set_xlim(0, est_visitors_val * 1.2)
+            ax.set_xlabel('Número de Visitantes')
+            ax.set_yticks([])
+            plt.tight_layout()
+            buf = BytesIO()
+            plt.savefig(buf, format='png')
+            plt.close(fig)
+            buf.seek(0)
+            plots["Estimación de Visitantes Diarios"] = buf
+
+    return plots
 
 # Título de la aplicación
 st.title("📈 Análisis de Potencial de Éxito de Plataformas Digitales")
@@ -173,6 +242,9 @@ if st.button("✅ Analizar"):
         if not secciones:
             secciones["Contenido"] = result
 
+        # Generar las gráficas y obtener los buffers de imagen
+        plots = generar_graficas(secciones)
+
         # Crear un contenedor para unificar el análisis
         with st.container():
             st.subheader("📊 Análisis Unificado")
@@ -181,28 +253,29 @@ if st.button("✅ Analizar"):
                 st.write(contenido)
 
                 # Incluir visualizaciones dentro de las secciones pertinentes
-                if titulo == "Potencial de Éxito":
-                    porcentaje_val = parse_number(contenido)
-                    if porcentaje_val is not None:
-                        fig, ax = plt.subplots(figsize=(2, 2))
-                        ax.pie([porcentaje_val, 100 - porcentaje_val], colors=['#4CAF50', '#CCCCCC'], startangle=90, counterclock=False)
-                        ax.axis('equal')
-                        st.pyplot(fig)
-                        st.markdown(f"**Potencial de Éxito: {porcentaje_val}%**")
-                elif titulo == "Estimación de Visitantes Diarios":
-                    est_visitors_val = parse_number(contenido)
-                    if est_visitors_val is not None:
-                        est_visitors_val = int(est_visitors_val)
-                        st.markdown("**La estimación de visitantes diarios se basa en la versión mejorada de la plataforma, incorporando los cambios sugeridos.**")
-                        st.metric(label="Máximo de Visitantes al Día", value=f"{est_visitors_val:,}")
-                        fig, ax = plt.subplots(figsize=(4, 1))
-                        ax.barh([''], [est_visitors_val], color='#4CAF50')
-                        ax.set_xlim(0, est_visitors_val * 1.2)
-                        ax.set_xlabel('Número de Visitantes')
-                        ax.set_yticks([])
-                        st.pyplot(fig)
+                if titulo in plots:
+                    # Mostrar la gráfica en Streamlit
+                    st.image(plots[titulo], use_column_width=True)
 
-        # **Eliminar la segunda presentación del análisis**
-        # Se ha eliminado la siguiente sección para evitar duplicidad:
-        # st.success("✅ Análisis completado:")
-        # st.write(result)
+                    # Opcional: Agregar descripciones adicionales si es necesario
+                    if titulo == "Potencial de Éxito":
+                        porcentaje_val = parse_number(contenido)
+                        if porcentaje_val is not None:
+                            st.markdown(f"**Potencial de Éxito: {porcentaje_val}%**")
+                    elif titulo == "Estimación de Visitantes Diarios":
+                        est_visitors_val = parse_number(contenido)
+                        if est_visitors_val is not None:
+                            est_visitors_val = int(est_visitors_val)
+                            st.markdown("**La estimación de visitantes diarios se basa en la versión mejorada de la plataforma, incorporando los cambios sugeridos.**")
+                            st.metric(label="Máximo de Visitantes al Día", value=f"{est_visitors_val:,}")
+
+        # Generar el PDF
+        pdf_buffer = generar_pdf(secciones, plots)
+
+        # Botón para descargar el PDF
+        st.download_button(
+            label="📥 Descargar Análisis en PDF",
+            data=pdf_buffer,
+            file_name="analisis_plataforma.pdf",
+            mime="application/pdf"
+        )

@@ -2,11 +2,11 @@ import streamlit as st
 import requests
 import json
 from urllib.parse import urlparse
-from streamlit_extras.metric_cards import style_metric_cards
+from io import BytesIO
+from docx import Document
+from docx.shared import Inches
 import matplotlib.pyplot as plt
-
-# Estilizar las tarjetas de métricas (opcional)
-style_metric_cards()
+import re
 
 # Título de la aplicación
 st.title("📈 Análisis de Potencial de Éxito de Plataformas Digitales")
@@ -116,73 +116,90 @@ if st.button("✅ Analizar"):
                     if "choices" in analysis and len(analysis["choices"]) > 0:
                         result = analysis["choices"][0]["message"]["content"]
 
-                        # Separar el análisis en secciones utilizando títulos
+                        # Separar el análisis en secciones utilizando títulos en negrita
                         secciones = {}
                         current_section = None
                         for line in result.split('\n'):
-                            if line.strip().startswith("**") and line.strip().endswith("**:"):
-                                # Es una nueva sección
-                                section_title = line.strip().strip('*:').strip()
+                            line = line.strip()
+                            # Detectar títulos en formato **Título**:
+                            match = re.match(r'\*\*(.*?)\*\*:', line)
+                            if match:
+                                section_title = match.group(1).strip()
                                 secciones[section_title] = ""
                                 current_section = section_title
                             elif current_section:
                                 secciones[current_section] += line + "\n"
 
-                        # Mostrar Resumen Ejecutivo
+                        # Crear un documento DOCX
+                        doc = Document()
+                        doc.add_heading('Análisis de Potencial de Éxito', 0)
+
+                        # Agregar Resumen Ejecutivo
                         if "Resumen Ejecutivo" in secciones:
-                            st.subheader("📄 Resumen Ejecutivo")
-                            st.write(secciones["Resumen Ejecutivo"])
+                            doc.add_heading('📄 Resumen Ejecutivo', level=1)
+                            doc.add_paragraph(secciones["Resumen Ejecutivo"])
                             del secciones["Resumen Ejecutivo"]
 
-                        # Mostrar Potencial de Éxito en Porcentaje
+                        # Agregar Potencial de Éxito
                         if "Potencial de Éxito" in secciones:
-                            st.subheader("📊 Potencial de Éxito")
-                            try:
-                                # Extraer el porcentaje del texto
-                                import re
-                                porcentaje = re.search(r'(\d+)%', secciones["Potencial de Éxito"])
-                                if porcentaje:
-                                    porcentaje_val = int(porcentaje.group(1))
-                                    # Visualización con matplotlib
-                                    fig, ax = plt.subplots(figsize=(2, 2))
-                                    ax.pie([porcentaje_val, 100 - porcentaje_val], colors=['#4CAF50', '#CCCCCC'], startangle=90, counterclock=False)
-                                    ax.axis('equal')  # Equal aspect ratio
-                                    st.pyplot(fig)
-                                    st.write(f"**Potencial de Éxito: {porcentaje_val}%**")
-                                else:
-                                    st.write(secciones["Potencial de Éxito"])
-                            except Exception as e:
+                            doc.add_heading('📊 Potencial de Éxito', level=1)
+                            pot_success_text = secciones["Potencial de Éxito"]
+                            # Extraer el porcentaje del texto
+                            porcentaje = re.search(r'(\d+)%', pot_success_text)
+                            if porcentaje:
+                                porcentaje_val = int(porcentaje.group(1))
+                                # Visualización con matplotlib
+                                fig, ax = plt.subplots(figsize=(2, 2))
+                                ax.pie([porcentaje_val, 100 - porcentaje_val], colors=['#4CAF50', '#CCCCCC'], startangle=90, counterclock=False)
+                                ax.axis('equal')  # Equal aspect ratio
+                                st.pyplot(fig)
+                                st.write(f"**Potencial de Éxito: {porcentaje_val}%**")
+                                # Agregar al DOCX
+                                doc.add_paragraph(f"**Potencial de Éxito: {porcentaje_val}%**")
+                            else:
                                 st.write(secciones["Potencial de Éxito"])
+                                doc.add_paragraph(secciones["Potencial de Éxito"])
                             del secciones["Potencial de Éxito"]
 
-                        # Mostrar Evaluación Detallada
+                        # Agregar Evaluación Detallada
                         if "Evaluación Detallada" in secciones:
+                            doc.add_heading('🔍 Evaluación Detallada', level=1)
+                            doc.add_paragraph(secciones["Evaluación Detallada"])
                             st.subheader("🔍 Evaluación Detallada")
                             st.write(secciones["Evaluación Detallada"])
                             del secciones["Evaluación Detallada"]
 
-                        # Mostrar Recomendaciones
+                        # Agregar Recomendaciones
                         if "Recomendaciones" in secciones:
+                            doc.add_heading('💡 Recomendaciones', level=1)
+                            doc.add_paragraph(secciones["Recomendaciones"])
                             st.subheader("💡 Recomendaciones")
                             st.write(secciones["Recomendaciones"])
                             del secciones["Recomendaciones"]
 
-                        # Mostrar cualquier otra sección
+                        # Agregar cualquier otra sección
                         for titulo, contenido in secciones.items():
+                            doc.add_heading(f"📌 {titulo}", level=1)
+                            doc.add_paragraph(contenido)
                             st.subheader(f"📌 {titulo}")
                             st.write(contenido)
 
                         # Opcional: Permitir al usuario descargar el análisis completo
-                        with st.expander("📥 Descargar Análisis Completo"):
-                            st.download_button(
-                                label="Descargar como TXT",
-                                data=result,
-                                file_name="analisis_plataforma.txt",
-                                mime="text/plain"
-                            )
-                            # Para descargar como PDF, se requerirían librerías adicionales
+                        # Crear un buffer para el archivo DOCX
+                        buffer = BytesIO()
+                        doc.save(buffer)
+                        buffer.seek(0)
+
+                        st.success("✅ Análisis completado:")
+                        st.write(result)
+
+                        st.download_button(
+                            label="📥 Descargar Análisis en DOCX",
+                            data=buffer,
+                            file_name="analisis_plataforma.docx",
+                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        )
                     else:
                         st.error("❌ Respuesta inesperada de Together API.")
                 else:
                     st.error(f"❌ Error al acceder a Together API: {response_together.status_code}")
-

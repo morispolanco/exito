@@ -1,10 +1,6 @@
 import streamlit as st
 import requests
-import json
 from urllib.parse import urlparse
-from io import BytesIO
-from docx import Document
-from docx.shared import Inches
 import matplotlib.pyplot as plt
 import re
 
@@ -157,10 +153,7 @@ if st.button("✅ Analizar"):
                 st.error(f"❌ {ve}")
                 st.stop()
 
-        # Mostrar la respuesta completa para depuración
-        st.subheader("📄 Respuesta de la API de Together")
-        st.write(result)
-
+        # Procesar y unificar el análisis
         # Separar el análisis en secciones utilizando títulos en negrita
         secciones = {}
         current_section = None
@@ -178,37 +171,37 @@ if st.button("✅ Analizar"):
         if not secciones:
             secciones["Contenido"] = result
 
-        # Depuración: Mostrar las secciones detectadas
-        st.subheader("🔍 Secciones Detectadas")
-        st.write(list(secciones.keys()))
+        # Depuración: Mostrar las secciones detectadas (opcional)
+        # st.subheader("🔍 Secciones Detectadas")
+        # st.write(list(secciones.keys()))
 
-        # Procesar cada sección
-        for titulo, contenido in secciones.items():
-            # Mostrar en Streamlit
-            st.subheader(f"📌 {titulo}")
-            st.write(contenido)
+        # Crear un contenedor para unificar el análisis
+        with st.container():
+            st.subheader("📊 Análisis Unificado")
+            for titulo, contenido in secciones.items():
+                st.markdown(f"### 📌 **{titulo}**")
+                st.write(contenido)
 
-            # Manejar secciones específicas
-            if titulo == "Potencial de Éxito":
-                porcentaje_val = parse_number(contenido)
-                if porcentaje_val is not None:
-                    fig, ax = plt.subplots(figsize=(2, 2))
-                    ax.pie([porcentaje_val, 100 - porcentaje_val], colors=['#4CAF50', '#CCCCCC'], startangle=90, counterclock=False)
-                    ax.axis('equal')
-                    st.pyplot(fig)
-                    st.write(f"**Potencial de Éxito: {porcentaje_val}%**")
-            elif titulo == "Estimación de Visitantes Diarios":
-                est_visitors_val = parse_number(contenido)
-                if est_visitors_val is not None:
-                    est_visitors_val = int(est_visitors_val)
-                    st.subheader("👥 Estimación de Visitantes Diarios")
-                    st.metric(label="Máximo de Visitantes al Día", value=f"{est_visitors_val:,}")
-                    fig, ax = plt.subplots(figsize=(4, 1))
-                    ax.barh([''], [est_visitors_val], color='#4CAF50')
-                    ax.set_xlim(0, est_visitors_val * 1.2)
-                    ax.set_xlabel('Número de Visitantes')
-                    ax.set_yticks([])
-                    st.pyplot(fig)
+                # Incluir visualizaciones dentro de las secciones pertinentes
+                if titulo == "Potencial de Éxito":
+                    porcentaje_val = parse_number(contenido)
+                    if porcentaje_val is not None:
+                        fig, ax = plt.subplots(figsize=(2, 2))
+                        ax.pie([porcentaje_val, 100 - porcentaje_val], colors=['#4CAF50', '#CCCCCC'], startangle=90, counterclock=False)
+                        ax.axis('equal')
+                        st.pyplot(fig)
+                        st.markdown(f"**Potencial de Éxito: {porcentaje_val}%**")
+                elif titulo == "Estimación de Visitantes Diarios":
+                    est_visitors_val = parse_number(contenido)
+                    if est_visitors_val is not None:
+                        est_visitors_val = int(est_visitors_val)
+                        st.metric(label="Máximo de Visitantes al Día", value=f"{est_visitors_val:,}")
+                        fig, ax = plt.subplots(figsize=(4, 1))
+                        ax.barh([''], [est_visitors_val], color='#4CAF50')
+                        ax.set_xlim(0, est_visitors_val * 1.2)
+                        ax.set_xlabel('Número de Visitantes')
+                        ax.set_yticks([])
+                        st.pyplot(fig)
 
         st.success("✅ Análisis completado:")
         st.write(result)

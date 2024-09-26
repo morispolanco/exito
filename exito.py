@@ -42,8 +42,7 @@ if st.button("Analizar"):
                 response_serper = requests.post(serper_url, headers=headers_serper, json=data_serper)
                 if response_serper.status_code == 200:
                     search_results = response_serper.json()
-                    # Puedes procesar los resultados según tus necesidades
-                    # Por ejemplo, extraer snippets o descripciones
+                    # Procesar los resultados
                     snippets = []
                     if "organic" in search_results:
                         for item in search_results["organic"]:
@@ -54,7 +53,7 @@ if st.button("Analizar"):
                     st.error(f"Error al acceder a Serper API: {response_serper.status_code}")
                     st.stop()
 
-            # Preparar el mensaje para Together API
+            # Preparar el mensaje para Together API con enfoque en demandas del mercado y recomendaciones
             together_api_key = st.secrets["together_api_key"]
             together_url = "https://api.together.xyz/v1/chat/completions"
             headers_together = {
@@ -64,7 +63,11 @@ if st.button("Analizar"):
             messages = [
                 {
                     "role": "system",
-                    "content": "Eres un experto en análisis de plataformas digitales. Analiza el siguiente contenido y proporciona una evaluación del potencial de éxito."
+                    "content": (
+                        "Eres un experto en análisis de plataformas digitales con un enfoque en las demandas del mercado. "
+                        "Proporciona una evaluación detallada del potencial de éxito de la plataforma digital basada en la siguiente información. "
+                        "Incluye recomendaciones sobre aspectos de forma y contenido, señalando lo que sobra y lo que falta."
+                    )
                 },
                 {
                     "role": "user",
@@ -80,12 +83,12 @@ if st.button("Analizar"):
                 "top_k": 50,
                 "repetition_penalty": 1,
                 "stop": ["<|eot_id|>"],
-                "stream": False  # Cambiado a False para simplificar el manejo
+                "stream": False  # Mantener en False para simplificar el manejo
             }
 
             # Realizar solicitud a Together API
             with st.spinner("Analizando con Together..."):
-                response_together = requests.post(together_url, headers=headers_together, json=data_together, stream=False)
+                response_together = requests.post(together_url, headers=headers_together, json=data_together)
                 if response_together.status_code == 200:
                     analysis = response_together.json()
                     # Asumiendo que la respuesta contiene 'choices' con 'message'
@@ -97,4 +100,3 @@ if st.button("Analizar"):
                         st.error("Respuesta inesperada de Together API.")
                 else:
                     st.error(f"Error al acceder a Together API: {response_together.status_code}")
-

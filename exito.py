@@ -11,7 +11,7 @@ from io import BytesIO
 
 def parse_number(text):
     """
-    Función para parsear números con diferentes formatos.
+    Función para parsear números con diferentes formatos. 
     Convierte cadenas de texto a números flotantes.
     """
     text = re.sub(r'[^\d.,]', '', text)

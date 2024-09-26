@@ -3,4 +3,4 @@ requests
 matplotlib
 fpdf2
 Pillow
-pyperclip
+python-pptx

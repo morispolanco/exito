@@ -171,10 +171,6 @@ if st.button("✅ Analizar"):
         if not secciones:
             secciones["Contenido"] = result
 
-        # Depuración: Mostrar las secciones detectadas (opcional)
-        # st.subheader("🔍 Secciones Detectadas")
-        # st.write(list(secciones.keys()))
-
         # Crear un contenedor para unificar el análisis
         with st.container():
             st.subheader("📊 Análisis Unificado")
@@ -203,5 +199,7 @@ if st.button("✅ Analizar"):
                         ax.set_yticks([])
                         st.pyplot(fig)
 
-        st.success("✅ Análisis completado:")
-        st.write(result)
+        # **Eliminar la segunda presentación del análisis**
+        # Se ha eliminado la siguiente sección para evitar duplicidad:
+        # st.success("✅ Análisis completado:")
+        # st.write(result)

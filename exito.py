@@ -13,7 +13,7 @@ st.title("📈 Análisis de Potencial de Éxito de Plataformas Digitales")
 
 # Descripción de la aplicación
 st.markdown("""
-Esta aplicación analiza el potencial de éxito de una plataforma digital basada en su URL. Utiliza las APIs de Serper para obtener información relevante sobre la plataforma y de Together para evaluar su potencial en el mercado actual. Además, proporciona recomendaciones detalladas para mejorar tanto en forma como en contenido.
+Esta aplicación analiza el potencial de éxito de una plataforma digital basada en su URL. Utiliza las APIs de Serper para obtener información relevante sobre la plataforma y de Together para evaluar su potencial en el mercado actual. Además, proporciona recomendaciones detalladas para mejorar tanto en forma como en contenido, así como una estimación del máximo de visitantes diarios que puede recibir la plataforma.
 """)
 
 # Entrada de la URL
@@ -73,7 +73,7 @@ if st.button("✅ Analizar"):
                     st.error(f"❌ Error al acceder a Serper API: {response_serper.status_code}")
                     st.stop()
 
-            # Preparar el mensaje para Together API con enfoque en demandas del mercado y recomendaciones
+            # Preparar el mensaje para Together API con enfoque en demandas del mercado, recomendaciones y estimación de visitantes
             together_api_key = st.secrets["together_api_key"]
             together_url = "https://api.together.xyz/v1/chat/completions"
             headers_together = {
@@ -87,7 +87,7 @@ if st.button("✅ Analizar"):
                         "Eres un experto en análisis de plataformas digitales con un enfoque en las demandas del mercado actual. "
                         "Proporciona una evaluación detallada del potencial de éxito de la plataforma digital basada en la siguiente información. "
                         "Incluye recomendaciones sobre aspectos de forma (diseño, usabilidad, interfaz) y fondo (funcionalidades, contenido, estrategia de mercado), señalando lo que sobra y lo que falta. "
-                        "Además, expresa el potencial de éxito en términos de porcentaje y proporciona un resumen ejecutivo de los hallazgos clave."
+                        "Además, expresa el potencial de éxito en términos de porcentaje, proporciona una estimación del máximo de visitantes al día y un resumen ejecutivo de los hallazgos clave."
                     )
                 },
                 {
@@ -161,45 +161,5 @@ if st.button("✅ Analizar"):
                                 doc.add_paragraph(secciones["Potencial de Éxito"])
                             del secciones["Potencial de Éxito"]
 
-                        # Agregar Evaluación Detallada
-                        if "Evaluación Detallada" in secciones:
-                            doc.add_heading('🔍 Evaluación Detallada', level=1)
-                            doc.add_paragraph(secciones["Evaluación Detallada"])
-                            st.subheader("🔍 Evaluación Detallada")
-                            st.write(secciones["Evaluación Detallada"])
-                            del secciones["Evaluación Detallada"]
-
-                        # Agregar Recomendaciones
-                        if "Recomendaciones" in secciones:
-                            doc.add_heading('💡 Recomendaciones', level=1)
-                            doc.add_paragraph(secciones["Recomendaciones"])
-                            st.subheader("💡 Recomendaciones")
-                            st.write(secciones["Recomendaciones"])
-                            del secciones["Recomendaciones"]
-
-                        # Agregar cualquier otra sección
-                        for titulo, contenido in secciones.items():
-                            doc.add_heading(f"📌 {titulo}", level=1)
-                            doc.add_paragraph(contenido)
-                            st.subheader(f"📌 {titulo}")
-                            st.write(contenido)
-
-                        # Opcional: Permitir al usuario descargar el análisis completo
-                        # Crear un buffer para el archivo DOCX
-                        buffer = BytesIO()
-                        doc.save(buffer)
-                        buffer.seek(0)
-
-                        st.success("✅ Análisis completado:")
-                        st.write(result)
-
-                        st.download_button(
-                            label="📥 Descargar Análisis en DOCX",
-                            data=buffer,
-                            file_name="analisis_plataforma.docx",
-                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        )
-                    else:
-                        st.error("❌ Respuesta inesperada de Together API.")
-                else:
-                    st.error(f"❌ Error al acceder a Together API: {response_together.status_code}")
+                        # Agregar Estimación de Visitantes Diarios
+                        if "Estimación de Visitantes Dia

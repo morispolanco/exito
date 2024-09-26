@@ -164,4 +164,67 @@ if st.button("✅ Analizar"):
                         # Agregar Estimación de Visitantes Diarios
                         if "Estimación de Visitantes Diarios" in secciones:
                             est_visitors_text = secciones["Estimación de Visitantes Diarios"]
-                            est_visitors_match = re.search(r'(\d[\d,\.]*)\s*visitantes al día', es
+                            est_visitors_match = re.search(r'(\d[\d,\.]*)\s*visitantes al día', est_visitors_text, re.IGNORECASE)
+                            if est_visitors_match:
+                                est_visitors_val = est_visitors_match.group(1).replace(',', '').replace('.', '')
+                                est_visitors_val = int(est_visitors_val)
+                                st.subheader("👥 Estimación de Visitantes Diarios")
+                                st.metric(label="Máximo de Visitantes al Día", value=f"{est_visitors_val:,}")
+                                # Agregar al DOCX
+                                doc.add_heading('👥 Estimación de Visitantes Diarios', level=1)
+                                doc.add_paragraph(f"**Máximo de Visitantes al Día: {est_visitors_val:,}**")
+                                # Visualización con matplotlib
+                                fig, ax = plt.subplots(figsize=(4, 1))
+                                ax.barh([''], [est_visitors_val], color='#4CAF50')
+                                ax.set_xlim(0, est_visitors_val * 1.2)
+                                ax.set_xlabel('Número de Visitantes')
+                                ax.set_yticks([])
+                                st.pyplot(fig)
+                            else:
+                                st.write(secciones["Estimación de Visitantes Diarios"])
+                                doc.add_heading('👥 Estimación de Visitantes Diarios', level=1)
+                                doc.add_paragraph(secciones["Estimación de Visitantes Diarios"])
+                            del secciones["Estimación de Visitantes Diarios"]
+
+                        # Agregar Evaluación Detallada
+                        if "Evaluación Detallada" in secciones:
+                            doc.add_heading('🔍 Evaluación Detallada', level=1)
+                            doc.add_paragraph(secciones["Evaluación Detallada"])
+                            st.subheader("🔍 Evaluación Detallada")
+                            st.write(secciones["Evaluación Detallada"])
+                            del secciones["Evaluación Detallada"]
+
+                        # Agregar Recomendaciones
+                        if "Recomendaciones" in secciones:
+                            doc.add_heading('💡 Recomendaciones', level=1)
+                            doc.add_paragraph(secciones["Recomendaciones"])
+                            st.subheader("💡 Recomendaciones")
+                            st.write(secciones["Recomendaciones"])
+                            del secciones["Recomendaciones"]
+
+                        # Agregar cualquier otra sección
+                        for titulo, contenido in secciones.items():
+                            doc.add_heading(f"📌 {titulo}", level=1)
+                            doc.add_paragraph(contenido)
+                            st.subheader(f"📌 {titulo}")
+                            st.write(contenido)
+
+                        # Opcional: Permitir al usuario descargar el análisis completo
+                        # Crear un buffer para el archivo DOCX
+                        buffer = BytesIO()
+                        doc.save(buffer)
+                        buffer.seek(0)
+
+                        st.success("✅ Análisis completado:")
+                        st.write(result)
+
+                        st.download_button(
+                            label="📥 Descargar Análisis en DOCX",
+                            data=buffer,
+                            file_name="analisis_plataforma.docx",
+                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        )
+                    else:
+                        st.error("❌ Respuesta inesperada de Together API.")
+                else:
+                    st.error(f"❌ Error al acceder a Together API: {response_together.status_code}")

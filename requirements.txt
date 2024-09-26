@@ -1,8 +1,7 @@
 streamlit
 requests
 streamlit-extras
-python-docxstreamlit==1.25.0
-requests==2.31.0
-matplotlib==3.7.2
-fpdf2==2.6.6
-Pillow==10.0.0
+python-docxstreamlit
+matplotlib
+fpdf2
+Pillow

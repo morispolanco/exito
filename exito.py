@@ -6,39 +6,6 @@ import json
 import matplotlib.pyplot as plt
 import io
 
-# Función ajustada para extraer subdominios
-def extraer_subdominios(domain, api_key):
-    url = "https://google.serper.dev/search"
-    
-    # Cambiamos el formato de la consulta para hacer una búsqueda más flexible
-    payload = json.dumps({
-        "q": f"site:{domain} -www.{domain}",
-        "num": 100
-    })
-    
-    headers = {
-        'X-API-KEY': api_key,
-        'Content-Type': 'application/json'
-    }
-    
-    response = requests.request("POST", url, headers=headers, data=payload)
-    response.raise_for_status()
-    
-    results = response.json().get('organic', [])
-    subdominios = set()
-    
-    # Extraemos subdominios que no sean el dominio principal
-    for result in results:
-        parsed_url = urlparse(result['link'])
-        subdominio = parsed_url.netloc
-        if subdominio != domain and subdominio.endswith(domain):
-            subdominios.add(subdominio)
-    
-    # Imprimimos los subdominios encontrados para depuración
-    st.write(f"Subdominios encontrados: {subdominios}")
-    
-    return list(subdominios)
-
 # Función para obtener búsqueda de Serper
 def obtener_busqueda_serper(query, api_key):
     url = "https://google.serper.dev/search"
@@ -112,9 +79,6 @@ def main():
     # Descripción de la aplicación
     st.markdown("""
     Esta aplicación analiza el potencial de éxito de una plataforma digital basada en su URL. Utiliza las APIs de Serper para obtener información relevante sobre la plataforma y de Together para evaluar su potencial en el mercado actual. Además, proporciona recomendaciones detalladas para mejorar tanto en forma como en contenido, así como una estimación del máximo de visitantes diarios que puede recibir la plataforma.
-
-    **Funcionalidades Adicionales:**
-    - **Análisis de Subdominios:** La aplicación identificará y analizará automáticamente todos los subdominios asociados al dominio principal proporcionado.
     """)
 
     # Entrada de la URL
@@ -159,59 +123,29 @@ def main():
 
                 st.info("🔄 Procesando la URL...")
 
-                # Realizar búsqueda con Serper API para obtener subdominios
+                # Realizar búsqueda con Serper API para obtener información del dominio
                 serper_api_key = st.secrets["serper_api_key"]
-                with st.spinner("🔍 Buscando subdominios con Serper..."):
+                query = f"Información sobre {domain}"
+                with st.spinner(f"🧠 Analizando {domain} con Together..."):
                     try:
-                        subdominios = extraer_subdominios(domain, serper_api_key)
+                        search_summary = obtener_busqueda_serper(query, serper_api_key)
+                        if not search_summary:
+                            st.warning(f"⚠️ No se encontró información relevante para {domain}.")
+                            continue
+                        analysis = obtener_analisis_together(search_summary, st.secrets["together_api_key"])
                     except requests.exceptions.HTTPError as http_err:
-                        st.error(f"❌ Error HTTP al acceder a Serper API: {http_err}")
-                        st.stop()
+                        st.error(f"❌ Error HTTP al acceder a la API: {http_err}")
+                        st.error(f"Detalles de la respuesta: {http_err.response.text}")
+                        continue
                     except requests.exceptions.RequestException as e:
-                        st.error(f"❌ Error al acceder a Serper API: {e}")
-                        st.stop()
-
-                if subdominios:
-                    st.success(f"✅ Se encontraron {len(subdominios)} subdominio(s).")
-                else:
-                    st.warning("⚠️ No se encontraron subdominios para analizar.")
-
-                # Agregar el dominio principal a la lista de subdominios para análisis
-                todos_los_dominios = [domain] + subdominios
-
-                # Preparar una estructura para almacenar los análisis
-                analisis_resultados = {}
-
-                for dom in todos_los_dominios:
-                    st.write(f"### 🔍 **Analizando:** {dom}")
-                    # Realizar búsqueda con Serper API para obtener información del dominio
-                    query = f"Información sobre {dom}"
-                    with st.spinner(f"🧠 Analizando {dom} con Together..."):
-                        try:
-                            search_summary = obtener_busqueda_serper(query, serper_api_key)
-                            if not search_summary:
-                                st.warning(f"⚠️ No se encontró información relevante para {dom}.")
-                                analisis_resultados[dom] = "No se encontró información relevante."
-                                continue
-                            analysis = obtener_analisis_together(search_summary, st.secrets["together_api_key"])
-                            analisis_resultados[dom] = analysis
-                        except requests.exceptions.HTTPError as http_err:
-                            st.error(f"❌ Error HTTP al acceder a la API: {http_err}")
-                            st.error(f"Detalles de la respuesta: {http_err.response.text}")
-                            analisis_resultados[dom] = "Error en el análisis."
-                            continue
-                        except requests.exceptions.RequestException as e:
-                            st.error(f"❌ Error al acceder a la API: {e}")
-                            analisis_resultados[dom] = "Error en el análisis."
-                            continue
-                        except ValueError as ve:
-                            st.error(f"❌ {ve}")
-                            analisis_resultados[dom] = "Error en el análisis."
-                            continue
-                        except Exception as e:
-                            st.error(f"❌ Error inesperado: {str(e)}")
-                            analisis_resultados[dom] = "Error en el análisis."
-                            continue
+                        st.error(f"❌ Error al acceder a la API: {e}")
+                        continue
+                    except ValueError as ve:
+                        st.error(f"❌ {ve}")
+                        continue
+                    except Exception as e:
+                        st.error(f"❌ Error inesperado: {str(e)}")
+                        continue
 
                     # Procesar y unificar el análisis
                     # Separar el análisis en secciones utilizando títulos en negrita

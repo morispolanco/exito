@@ -99,7 +99,7 @@ def main():
                 domain = parsed_url.netloc
                 if not domain:
                     st.error("⚠️ URL inválida. Por favor, intenta nuevamente.")
-                    st.stop()
+                    return
 
                 # Mostrar la URL que se analizará
                 st.write(f"**URL a analizar:** {url_input}")
@@ -110,16 +110,16 @@ def main():
                     response.raise_for_status()
                 except requests.exceptions.HTTPError as http_err:
                     st.error(f"⚠️ Error HTTP al acceder a la URL: {http_err}")
-                    st.stop()
+                    return
                 except requests.exceptions.ConnectionError:
                     st.error("⚠️ Error de conexión. Verifica tu red y la URL ingresada.")
-                    st.stop()
+                    return
                 except requests.exceptions.Timeout:
                     st.error("⚠️ Tiempo de espera excedido al intentar acceder a la URL.")
-                    st.stop()
+                    return
                 except requests.exceptions.RequestException as e:
                     st.error(f"⚠️ Error al acceder a la URL: {e}")
-                    st.stop()
+                    return
 
                 st.info("🔄 Procesando la URL...")
 
@@ -131,21 +131,21 @@ def main():
                         search_summary = obtener_busqueda_serper(query, serper_api_key)
                         if not search_summary:
                             st.warning(f"⚠️ No se encontró información relevante para {domain}.")
-                            continue
+                            return
                         analysis = obtener_analisis_together(search_summary, st.secrets["together_api_key"])
                     except requests.exceptions.HTTPError as http_err:
                         st.error(f"❌ Error HTTP al acceder a la API: {http_err}")
                         st.error(f"Detalles de la respuesta: {http_err.response.text}")
-                        continue
+                        return
                     except requests.exceptions.RequestException as e:
                         st.error(f"❌ Error al acceder a la API: {e}")
-                        continue
+                        return
                     except ValueError as ve:
                         st.error(f"❌ {ve}")
-                        continue
+                        return
                     except Exception as e:
                         st.error(f"❌ Error inesperado: {str(e)}")
-                        continue
+                        return
 
                     # Procesar y unificar el análisis
                     # Separar el análisis en secciones utilizando títulos en negrita

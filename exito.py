@@ -54,7 +54,7 @@ def obtener_busqueda_serper(query, api_key):
 def obtener_analisis_together(summary, api_key):
     url = "https://api.together.xyz/v1/completions"
     payload = {
-        "model": "togethercomputer/llama-2-70b-chat",
+        "model": "mistralai/Mixtral-8x7B-v0.1",
         "prompt": f"Human: Analiza el siguiente resumen y proporciona un análisis detallado del potencial de éxito de la plataforma digital, incluyendo recomendaciones para mejorar y una estimación del máximo de visitantes diarios:\n\n{summary}\n\nAssistant: Basado en el resumen proporcionado, aquí está mi análisis detallado del potencial de éxito de la plataforma digital:",
         "max_tokens": 1000,
         "temperature": 0.7,

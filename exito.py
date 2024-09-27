@@ -73,124 +73,147 @@ def generar_graficas(secciones):
 
 # Función principal
 def main():
-    # Título de la aplicación
-    st.title("📈 Análisis de Potencial de Éxito de Plataformas Digitales")
+    # Dividimos la interfaz en dos columnas
+    col1, col2 = st.columns([1, 2])
 
-    # Descripción de la aplicación
-    st.markdown("""
-    Esta aplicación analiza el potencial de éxito de una plataforma digital basada en su URL. Utiliza las APIs de Serper para obtener información relevante sobre la plataforma y de Together para evaluar su potencial en el mercado actual. Además, proporciona recomendaciones detalladas para mejorar tanto en forma como en contenido, así como una estimación del máximo de visitantes diarios que puede recibir la plataforma.
-    """)
+    # En la columna izquierda (col1), ponemos la explicación
+    with col1:
+        st.markdown("""
+        ### 🤔 ¿Qué es esta aplicación?
 
-    # Entrada de la URL
-    url_input = st.text_input("🔗 Ingresa la URL de la plataforma digital que deseas analizar:", "")
+        Esta aplicación realiza un análisis del **potencial de éxito** de plataformas digitales basadas en su URL. Para esto, utiliza varias fuentes y herramientas, como las APIs de **Serper** y **Together**.
 
-    # Botón para iniciar el análisis
-    if st.button("✅ Analizar"):
-        if not url_input:
-            st.error("⚠️ Por favor, ingresa una URL válida.")
-        else:
-            try:
-                # Validar y formatear la URL
-                parsed_url = urlparse(url_input)
-                if not parsed_url.scheme:
-                    url_input = "https://" + url_input  # Preferir HTTPS
-                    parsed_url = urlparse(url_input)
+        ### 🚀 ¿Qué hace?
 
-                domain = parsed_url.netloc
-                if not domain:
-                    st.error("⚠️ URL inválida. Por favor, intenta nuevamente.")
-                    return
+        - Toma la URL de una plataforma digital (por ejemplo, un sitio web).
+        - Utiliza la API de Serper para obtener información relacionada con esa URL.
+        - A través de la API de Together, genera un análisis detallado que incluye recomendaciones para mejorar la plataforma y una estimación de cuántos visitantes diarios podría recibir.
 
-                # Mostrar la URL que se analizará
-                st.write(f"**URL a analizar:** {url_input}")
+        ### ❌ ¿Qué no hace?
 
-                # Verificar acceso a la URL
+        - No analiza subdominios ni subdirectorios, solo el dominio principal.
+        - No realiza análisis de seguridad del sitio web.
+        - No analiza el contenido completo del sitio, solo utiliza la información disponible públicamente y procesada por motores de búsqueda.
+        - No garantiza que las proyecciones de visitantes sean completamente exactas, ya que dependen de factores externos como el mercado o la competencia.
+
+        **Es una herramienta de evaluación preliminar** para obtener una idea del rendimiento potencial de una plataforma digital.
+        """)
+
+    # En la columna derecha (col2), ponemos el análisis
+    with col2:
+        # Título de la aplicación
+        st.title("📈 Análisis de Potencial de Éxito de Plataformas Digitales")
+
+        # Entrada de la URL
+        url_input = st.text_input("🔗 Ingresa la URL de la plataforma digital que deseas analizar:", "")
+
+        # Botón para iniciar el análisis
+        if st.button("✅ Analizar"):
+            if not url_input:
+                st.error("⚠️ Por favor, ingresa una URL válida.")
+            else:
                 try:
-                    response = requests.get(url_input, timeout=10)
-                    response.raise_for_status()
-                except requests.exceptions.HTTPError as http_err:
-                    st.error(f"⚠️ Error HTTP al acceder a la URL: {http_err}")
-                    return
-                except requests.exceptions.ConnectionError:
-                    st.error("⚠️ Error de conexión. Verifica tu red y la URL ingresada.")
-                    return
-                except requests.exceptions.Timeout:
-                    st.error("⚠️ Tiempo de espera excedido al intentar acceder a la URL.")
-                    return
-                except requests.exceptions.RequestException as e:
-                    st.error(f"⚠️ Error al acceder a la URL: {e}")
-                    return
+                    # Validar y formatear la URL
+                    parsed_url = urlparse(url_input)
+                    if not parsed_url.scheme:
+                        url_input = "https://" + url_input  # Preferir HTTPS
+                        parsed_url = urlparse(url_input)
 
-                st.info("🔄 Procesando la URL...")
+                    domain = parsed_url.netloc
+                    if not domain:
+                        st.error("⚠️ URL inválida. Por favor, intenta nuevamente.")
+                        return
 
-                # Realizar búsqueda con Serper API para obtener información del dominio
-                serper_api_key = st.secrets["serper_api_key"]
-                query = f"Información sobre {domain}"
-                with st.spinner(f"🧠 Analizando {domain} con Together..."):
+                    # Mostrar la URL que se analizará
+                    st.write(f"**URL a analizar:** {url_input}")
+
+                    # Verificar acceso a la URL
                     try:
-                        search_summary = obtener_busqueda_serper(query, serper_api_key)
-                        if not search_summary:
-                            st.warning(f"⚠️ No se encontró información relevante para {domain}.")
-                            return
-                        analysis = obtener_analisis_together(search_summary, st.secrets["together_api_key"])
+                        response = requests.get(url_input, timeout=10)
+                        response.raise_for_status()
                     except requests.exceptions.HTTPError as http_err:
-                        st.error(f"❌ Error HTTP al acceder a la API: {http_err}")
-                        st.error(f"Detalles de la respuesta: {http_err.response.text}")
+                        st.error(f"⚠️ Error HTTP al acceder a la URL: {http_err}")
+                        return
+                    except requests.exceptions.ConnectionError:
+                        st.error("⚠️ Error de conexión. Verifica tu red y la URL ingresada.")
+                        return
+                    except requests.exceptions.Timeout:
+                        st.error("⚠️ Tiempo de espera excedido al intentar acceder a la URL.")
                         return
                     except requests.exceptions.RequestException as e:
-                        st.error(f"❌ Error al acceder a la API: {e}")
-                        return
-                    except ValueError as ve:
-                        st.error(f"❌ {ve}")
-                        return
-                    except Exception as e:
-                        st.error(f"❌ Error inesperado: {str(e)}")
+                        st.error(f"⚠️ Error al acceder a la URL: {e}")
                         return
 
-                    # Procesar y unificar el análisis
-                    # Separar el análisis en secciones utilizando títulos en negrita
-                    secciones = {}
-                    current_section = None
-                    for line in analysis.split('\n'):
-                        line = line.strip()
-                        match = re.match(r'\*\*(.*?)\*\*:', line)
-                        if match:
-                            section_title = match.group(1).strip()
-                            secciones[section_title] = ""
-                            current_section = section_title
-                        elif current_section:
-                            secciones[current_section] += line + "\n"
+                    st.info("🔄 Procesando la URL...")
 
-                    # Manejar caso sin secciones
-                    if not secciones:
-                        secciones["Contenido"] = analysis
+                    # Realizar búsqueda con Serper API para obtener información del dominio
+                    serper_api_key = st.secrets["serper_api_key"]
+                    query = f"Información sobre {domain}"
+                    with st.spinner(f"🧠 Analizando {domain} con Together..."):
+                        try:
+                            search_summary = obtener_busqueda_serper(query, serper_api_key)
+                            if not search_summary:
+                                st.warning(f"⚠️ No se encontró información relevante para {domain}.")
+                                return
+                            analysis = obtener_analisis_together(search_summary, st.secrets["together_api_key"])
+                        except requests.exceptions.HTTPError as http_err:
+                            st.error(f"❌ Error HTTP al acceder a la API: {http_err}")
+                            st.error(f"Detalles de la respuesta: {http_err.response.text}")
+                            return
+                        except requests.exceptions.RequestException as e:
+                            st.error(f"❌ Error al acceder a la API: {e}")
+                            return
+                        except ValueError as ve:
+                            st.error(f"❌ {ve}")
+                            return
+                        except Exception as e:
+                            st.error(f"❌ Error inesperado: {str(e)}")
+                            return
 
-                    # Generar las gráficas y obtener los buffers de imagen
-                    plots = generar_graficas(secciones)
+                        # Procesar y unificar el análisis
+                        # Separar el análisis en secciones utilizando títulos en negrita
+                        secciones = {}
+                        current_section = None
+                        for line in analysis.split('\n'):
+                            line = line.strip()
+                            match = re.match(r'\*\*(.*?)\*\*:', line)
+                            if match:
+                                section_title = match.group(1).strip()
+                                secciones[section_title] = ""
+                                current_section = section_title
+                            elif current_section:
+                                secciones[current_section] += line + "\n"
 
-                    # Mostrar el análisis para el dominio/subdominio
-                    with st.container():
-                        st.subheader("📊 Análisis Unificado")
-                        for titulo, contenido in secciones.items():
-                            st.markdown(f"### 📌 **{titulo}**")
-                            st.write(contenido)
+                        # Manejar caso sin secciones
+                        if not secciones:
+                            secciones["Contenido"] = analysis
 
-                            # Incluir visualizaciones dentro de las secciones pertinentes
-                            if titulo in plots:
-                                # Mostrar la gráfica en Streamlit
-                                st.image(plots[titulo], use_column_width=True)
+                        # Generar las gráficas y obtener los buffers de imagen
+                        plots = generar_graficas(secciones)
 
-                                # Agregar explicación detallada para la estimación de visitantes diarios
-                                if titulo == "Estimación de Visitantes Diarios":
-                                    st.markdown("""
-                                    **¿Cómo se estima el número máximo de visitantes diarios?**
-                                    Esta estimación se basa en el análisis de la información recopilada sobre la plataforma,
-                                    incluyendo factores como el tráfico actual, el nicho de mercado, la competencia y el potencial de crecimiento.
-                                    Es una proyección aproximada y puede variar según diversos factores externos.
-                                    """)
+                        # Mostrar el análisis para el dominio/subdominio
+                        with st.container():
+                            st.subheader("📊 Análisis Unificado")
+                            for titulo, contenido in secciones.items():
+                                st.markdown(f"### 📌 **{titulo}**")
+                                st.write(contenido)
 
-            except Exception as e:
-                st.error(f"❌ Se produjo un error inesperado: {str(e)}")
+                                # Incluir visualizaciones dentro de las secciones pertinentes
+                                if titulo in plots:
+                                    # Mostrar la gráfica en Streamlit
+                                    st.image(plots[titulo], use_column_width=True)
+
+                                    # Agregar explicación detallada para la estimación de visitantes diarios
+                                    if titulo == "Estimación de Visitantes Diarios":
+                                        st.markdown("""
+                                        **¿Cómo se estima el número máximo de visitantes diarios?**
+                                        Esta estimación se basa en el análisis de la información recopilada sobre la plataforma,
+                                        incluyendo factores como el tráfico actual, el nicho de mercado, la competencia y el potencial de crecimiento.
+                                        Es una proyección aproximada y puede variar según diversos factores externos.
+                                        """)
+
+                except Exception as e:
+                    st.error(f"❌ Se produjo un error inesperado: {str(e)}")
 
 if __name__ == "__main__":
     main()

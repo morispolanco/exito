@@ -6,26 +6,36 @@ import json
 import matplotlib.pyplot as plt
 import io
 
-# Función para extraer subdominios
+# Función ajustada para extraer subdominios
 def extraer_subdominios(domain, api_key):
     url = "https://google.serper.dev/search"
+    
+    # Cambiamos el formato de la consulta para hacer una búsqueda más flexible
     payload = json.dumps({
-        "q": f"site:*.{domain} -site:www.{domain}",
+        "q": f"site:{domain} -www.{domain}",
         "num": 100
     })
+    
     headers = {
         'X-API-KEY': api_key,
         'Content-Type': 'application/json'
     }
+    
     response = requests.request("POST", url, headers=headers, data=payload)
     response.raise_for_status()
     
     results = response.json().get('organic', [])
     subdominios = set()
+    
+    # Extraemos subdominios que no sean el dominio principal
     for result in results:
         parsed_url = urlparse(result['link'])
-        if parsed_url.netloc.endswith(domain) and parsed_url.netloc != domain:
-            subdominios.add(parsed_url.netloc)
+        subdominio = parsed_url.netloc
+        if subdominio != domain and subdominio.endswith(domain):
+            subdominios.add(subdominio)
+    
+    # Imprimimos los subdominios encontrados para depuración
+    st.write(f"Subdominios encontrados: {subdominios}")
     
     return list(subdominios)
 

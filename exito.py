@@ -6,6 +6,9 @@ import json
 import matplotlib.pyplot as plt
 import io
 
+# Establecer modo wide
+st.set_page_config(layout="wide")
+
 # Función para obtener búsqueda de Serper
 def obtener_busqueda_serper(query, api_key):
     url = "https://google.serper.dev/search"

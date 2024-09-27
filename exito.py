@@ -315,7 +315,7 @@ def main():
                                     5. **Soporte y Atención al Cliente:**
                                        - **Canales de Soporte Eficientes:** Ofrecer soporte rápido y efectivo resuelve problemas de usuarios y mejora la percepción general de la plataforma.
                                     
-                                    **Conclusión:**
+                                    **Conclusión:** 
                                     
                                     Al implementar las mejoras sugeridas en estos aspectos, se espera que la plataforma digital no solo aumente su atractivo y funcionalidad, sino que también mejore su capacidad para atraer y retener un mayor número de visitantes diarios. La combinación de un diseño optimizado, contenido de calidad, estrategias de marketing efectivas y funcionalidades avanzadas contribuye significativamente a la estimación del número máximo de visitantes diarios.
                                     """)

@@ -41,9 +41,9 @@ def obtener_busqueda_serper(query, api_key):
     snippets = []
     if "organic" in search_results:
         for item in search_results["organic"]:
-            if "snippet" in item:
-                snippets.append(item["snippet"])
-    return "\n\n".join(snippets) if snippets else "No se encontraron resultados relevantes."
+            if "snippet" in item and "link" in item:
+                snippets.append(item["link"])
+    return snippets if snippets else []
 
 @st.cache_data(show_spinner=False)
 def obtener_analisis_together(search_summary, api_key):
@@ -130,6 +130,22 @@ def generar_graficas(secciones):
 
     return plots
 
+def extraer_subdominios(domain, serper_api_key):
+    """
+    Función para extraer subdominios utilizando la API de Serper.
+    """
+    query = f"site:{domain}"
+    subdominios = obtener_busqueda_serper(query, serper_api_key)
+    subdominios_unicos = set()
+
+    for url in subdominios:
+        parsed_url = urlparse(url)
+        subdomain = parsed_url.netloc
+        if subdomain and subdomain != domain:
+            subdominios_unicos.add(subdomain)
+
+    return list(subdominios_unicos)
+
 # ============================================
 # Aplicación Streamlit
 # ============================================
@@ -141,6 +157,9 @@ def main():
     # Descripción de la aplicación
     st.markdown("""
     Esta aplicación analiza el potencial de éxito de una plataforma digital basada en su URL. Utiliza las APIs de Serper para obtener información relevante sobre la plataforma y de Together para evaluar su potencial en el mercado actual. Además, proporciona recomendaciones detalladas para mejorar tanto en forma como en contenido, así como una estimación del máximo de visitantes diarios que puede recibir la plataforma.
+
+    **Funcionalidades Adicionales:**
+    - **Análisis de Subdominios:** La aplicación identificará y analizará automáticamente todos los subdominios asociados al dominio principal proporcionado.
     """)
 
     # Entrada de la URL
@@ -183,13 +202,11 @@ def main():
 
             st.info("🔄 Procesando la URL...")
 
-            # Realizar búsqueda con Serper API
+            # Realizar búsqueda con Serper API para obtener subdominios
             serper_api_key = st.secrets["serper_api_key"]
-            query = f"Información sobre {domain}"
-
-            with st.spinner("🔍 Realizando búsqueda con Serper..."):
+            with st.spinner("🔍 Buscando subdominios con Serper..."):
                 try:
-                    search_summary = obtener_busqueda_serper(query, serper_api_key)
+                    subdominios = extraer_subdominios(domain, serper_api_key)
                 except requests.exceptions.HTTPError as http_err:
                     st.error(f"❌ Error HTTP al acceder a Serper API: {http_err}")
                     st.stop()
@@ -197,86 +214,103 @@ def main():
                     st.error(f"❌ Error al acceder a Serper API: {e}")
                     st.stop()
 
-            # Preparar el mensaje para Together API
-            together_api_key = st.secrets["together_api_key"]
+            if subdominios:
+                st.success(f"✅ Se encontraron {len(subdominios)} subdominio(s).")
+            else:
+                st.warning("⚠️ No se encontraron subdominios para analizar.")
 
-            with st.spinner("🧠 Analizando con Together..."):
-                try:
-                    result = obtener_analisis_together(search_summary, together_api_key)
-                except requests.exceptions.HTTPError as http_err:
-                    st.error(f"❌ Error HTTP al acceder a Together API: {http_err}")
-                    st.stop()
-                except requests.exceptions.RequestException as e:
-                    st.error(f"❌ Error al acceder a Together API: {e}")
-                    st.stop()
-                except ValueError as ve:
-                    st.error(f"❌ {ve}")
-                    st.stop()
+            # Agregar el dominio principal a la lista de subdominios para análisis
+            todos_los_dominios = [domain] + subdominios
 
-            # Procesar y unificar el análisis
-            # Separar el análisis en secciones utilizando títulos en negrita
-            secciones = {}
-            current_section = None
-            for line in result.split('\n'):
-                line = line.strip()
-                match = re.match(r'\*\*(.*?)\*\*:', line)
-                if match:
-                    section_title = match.group(1).strip()
-                    secciones[section_title] = ""
-                    current_section = section_title
-                elif current_section:
-                    secciones[current_section] += line + "\n"
+            # Preparar una estructura para almacenar los análisis
+            analisis_resultados = {}
 
-            # Manejar caso sin secciones
-            if not secciones:
-                secciones["Contenido"] = result
+            for dom in todos_los_dominios:
+                st.write(f"### 🔍 **Analizando:** {dom}")
+                # Realizar búsqueda con Serper API para obtener información del dominio
+                query = f"Información sobre {dom}"
+                with st.spinner(f"🧠 Analizando {dom} con Together..."):
+                    try:
+                        search_summary = obtener_busqueda_serper(query, serper_api_key)
+                        analysis = obtener_analisis_together(search_summary, st.secrets["together_api_key"])
+                        analisis_resultados[dom] = analysis
+                    except requests.exceptions.HTTPError as http_err:
+                        st.error(f"❌ Error HTTP al acceder a la API: {http_err}")
+                        analisis_resultados[dom] = "Error en el análisis."
+                        continue
+                    except requests.exceptions.RequestException as e:
+                        st.error(f"❌ Error al acceder a la API: {e}")
+                        analisis_resultados[dom] = "Error en el análisis."
+                        continue
+                    except ValueError as ve:
+                        st.error(f"❌ {ve}")
+                        analisis_resultados[dom] = "Error en el análisis."
+                        continue
 
-            # Generar las gráficas y obtener los buffers de imagen
-            plots = generar_graficas(secciones)
+                # Procesar y unificar el análisis
+                # Separar el análisis en secciones utilizando títulos en negrita
+                secciones = {}
+                current_section = None
+                for line in analysis.split('\n'):
+                    line = line.strip()
+                    match = re.match(r'\*\*(.*?)\*\*:', line)
+                    if match:
+                        section_title = match.group(1).strip()
+                        secciones[section_title] = ""
+                        current_section = section_title
+                    elif current_section:
+                        secciones[current_section] += line + "\n"
 
-            # Crear un contenedor para unificar el análisis
-            with st.container():
-                st.subheader("📊 Análisis Unificado")
-                for titulo, contenido in secciones.items():
-                    st.markdown(f"### 📌 **{titulo}**")
-                    st.write(contenido)
+                # Manejar caso sin secciones
+                if not secciones:
+                    secciones["Contenido"] = analysis
 
-                    # Incluir visualizaciones dentro de las secciones pertinentes
-                    if titulo in plots:
-                        # Mostrar la gráfica en Streamlit
-                        st.image(plots[titulo], use_column_width=True)
+                # Generar las gráficas y obtener los buffers de imagen
+                plots = generar_graficas(secciones)
 
-                        # Agregar explicación detallada para la estimación de visitantes diarios
-                        if titulo == "Estimación de Visitantes Diarios":
-                            st.markdown("""
-                            **¿Cómo se estima el número máximo de visitantes diarios?**
+                # Mostrar el análisis para el dominio/subdominio
+                with st.container():
+                    st.subheader("📊 Análisis Unificado")
+                    for titulo, contenido in secciones.items():
+                        st.markdown(f"### 📌 **{titulo}**")
+                        st.write(contenido)
 
-                            La estimación de visitantes diarios se basa en un análisis detallado de la plataforma digital, considerando varios factores clave que influyen en su capacidad de atraer y retener usuarios. A continuación, se detallan los aspectos considerados para esta estimación:
+                        # Incluir visualizaciones dentro de las secciones pertinentes
+                        if titulo in plots:
+                            # Mostrar la gráfica en Streamlit
+                            st.image(plots[titulo], use_column_width=True)
 
-                            1. **Optimización de la Usabilidad y Diseño:**
-                               - **Mejoras en la Interfaz de Usuario (UI):** Un diseño intuitivo y atractivo facilita la navegación y mejora la experiencia del usuario, lo que puede incrementar la retención y la recomendación boca a boca.
-                               - **Responsive Design:** La adaptación del sitio web a diferentes dispositivos (móviles, tabletas, computadoras) asegura que una mayor audiencia pueda acceder y utilizar la plataforma sin inconvenientes.
+                            # Agregar explicación detallada para la estimación de visitantes diarios
+                            if titulo == "Estimación de Visitantes Diarios":
+                                st.markdown("""
+                                **¿Cómo se estima el número máximo de visitantes diarios?**
 
-                            2. **Contenido Relevante y de Calidad:**
-                               - **Actualización Regular del Contenido:** Mantener el contenido fresco y actualizado atrae a usuarios recurrentes y mejora el posicionamiento en motores de búsqueda.
-                               - **SEO (Search Engine Optimization):** La optimización para motores de búsqueda incrementa la visibilidad de la plataforma, atrayendo más tráfico orgánico.
+                                La estimación de visitantes diarios se basa en un análisis detallado de la plataforma digital, considerando varios factores clave que influyen en su capacidad de atraer y retener usuarios. A continuación, se detallan los aspectos considerados para esta estimación:
 
-                            3. **Estrategias de Marketing y Promoción:**
-                               - **Campañas de Marketing Digital:** Utilizar canales como redes sociales, correo electrónico y publicidad pagada puede aumentar significativamente el tráfico hacia la plataforma.
-                               - **Colaboraciones y Alianzas Estratégicas:** Asociarse con otras empresas o influencers puede ampliar la base de usuarios potenciales.
+                                1. **Optimización de la Usabilidad y Diseño:**
+                                   - **Mejoras en la Interfaz de Usuario (UI):** Un diseño intuitivo y atractivo facilita la navegación y mejora la experiencia del usuario, lo que puede incrementar la retención y la recomendación boca a boca.
+                                   - **Responsive Design:** La adaptación del sitio web a diferentes dispositivos (móviles, tabletas, computadoras) asegura que una mayor audiencia pueda acceder y utilizar la plataforma sin inconvenientes.
 
-                            4. **Funcionalidades Mejoradas:**
-                               - **Integración de Funcionalidades Clave:** Incorporar herramientas y características que satisfagan las necesidades de los usuarios puede aumentar el tiempo de permanencia y la frecuencia de visitas.
-                               - **Análisis de Datos y Personalización:** Utilizar datos para personalizar la experiencia del usuario mejora la satisfacción y fomenta la lealtad.
+                                2. **Contenido Relevante y de Calidad:**
+                                   - **Actualización Regular del Contenido:** Mantener el contenido fresco y actualizado atrae a usuarios recurrentes y mejora el posicionamiento en motores de búsqueda.
+                                   - **SEO (Search Engine Optimization):** La optimización para motores de búsqueda incrementa la visibilidad de la plataforma, atrayendo más tráfico orgánico.
 
-                            5. **Soporte y Atención al Cliente:**
-                               - **Canales de Soporte Eficientes:** Ofrecer soporte rápido y efectivo resuelve problemas de usuarios y mejora la percepción general de la plataforma.
+                                3. **Estrategias de Marketing y Promoción:**
+                                   - **Campañas de Marketing Digital:** Utilizar canales como redes sociales, correo electrónico y publicidad pagada puede aumentar significativamente el tráfico hacia la plataforma.
+                                   - **Colaboraciones y Alianzas Estratégicas:** Asociarse con otras empresas o influencers puede ampliar la base de usuarios potenciales.
 
-                            **Conclusión:**
+                                4. **Funcionalidades Mejoradas:**
+                                   - **Integración de Funcionalidades Clave:** Incorporar herramientas y características que satisfagan las necesidades de los usuarios puede aumentar el tiempo de permanencia y la frecuencia de visitas.
+                                   - **Análisis de Datos y Personalización:** Utilizar datos para personalizar la experiencia del usuario mejora la satisfacción y fomenta la lealtad.
 
-                            Al implementar las mejoras sugeridas en estos aspectos, se espera que la plataforma digital no solo aumente su atractivo y funcionalidad, sino que también mejore su capacidad para atraer y retener un mayor número de visitantes diarios. La combinación de un diseño optimizado, contenido de calidad, estrategias de marketing efectivas y funcionalidades avanzadas contribuye significativamente a la estimación del número máximo de visitantes diarios.
-                            """)
+                                5. **Soporte y Atención al Cliente:**
+                                   - **Canales de Soporte Eficientes:** Ofrecer soporte rápido y efectivo resuelve problemas de usuarios y mejora la percepción general de la plataforma.
 
-# Ejecutar la aplicación
-if __name__ == "__main__":
-    main()
+                                **Conclusión:**
+
+                                Al implementar las mejoras sugeridas en estos aspectos, se espera que la plataforma digital no solo aumente su atractivo y funcionalidad, sino que también mejore su capacidad para atraer y retener un mayor número de visitantes diarios. La combinación de un diseño optimizado, contenido de calidad, estrategias de marketing efectivas y funcionalidades avanzadas contribuye significativamente a la estimación del número máximo de visitantes diarios.
+                                """)
+
+    # Ejecutar la aplicación
+    if __name__ == "__main__":
+        main()

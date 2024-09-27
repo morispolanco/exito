@@ -50,23 +50,27 @@ def obtener_busqueda_serper(query, api_key):
     
     return summary
 
-# Función para obtener análisis de Together
+# Función actualizada para obtener análisis de Together
 def obtener_analisis_together(summary, api_key):
     url = "https://api.together.xyz/v1/completions"
-    payload = json.dumps({
-        "model": "together/llama-2-70b-chat",
-        "prompt": f"Analiza el siguiente resumen y proporciona un análisis detallado del potencial de éxito de la plataforma digital, incluyendo recomendaciones para mejorar y una estimación del máximo de visitantes diarios:\n\n{summary}",
+    payload = {
+        "model": "togethercomputer/llama-2-70b-chat",
+        "prompt": f"Human: Analiza el siguiente resumen y proporciona un análisis detallado del potencial de éxito de la plataforma digital, incluyendo recomendaciones para mejorar y una estimación del máximo de visitantes diarios:\n\n{summary}\n\nAssistant: Basado en el resumen proporcionado, aquí está mi análisis detallado del potencial de éxito de la plataforma digital:",
         "max_tokens": 1000,
-        "temperature": 0.7
-    })
+        "temperature": 0.7,
+        "top_p": 0.7,
+        "top_k": 50,
+        "repetition_penalty": 1,
+        "stop": ["Human:", "Assistant:"]
+    }
     headers = {
         'Authorization': f'Bearer {api_key}',
         'Content-Type': 'application/json'
     }
-    response = requests.request("POST", url, headers=headers, data=payload)
+    response = requests.post(url, json=payload, headers=headers)
     response.raise_for_status()
     
-    return response.json()['choices'][0]['text']
+    return response.json()['choices'][0]['text'].strip()
 
 # Función para generar gráficas
 def generar_graficas(secciones):
@@ -182,6 +186,7 @@ def main():
                             analisis_resultados[dom] = analysis
                         except requests.exceptions.HTTPError as http_err:
                             st.error(f"❌ Error HTTP al acceder a la API: {http_err}")
+                            st.error(f"Detalles de la respuesta: {http_err.response.text}")
                             analisis_resultados[dom] = "Error en el análisis."
                             continue
                         except requests.exceptions.RequestException as e:
@@ -190,6 +195,10 @@ def main():
                             continue
                         except ValueError as ve:
                             st.error(f"❌ {ve}")
+                            analisis_resultados[dom] = "Error en el análisis."
+                            continue
+                        except Exception as e:
+                            st.error(f"❌ Error inesperado: {str(e)}")
                             analisis_resultados[dom] = "Error en el análisis."
                             continue
 

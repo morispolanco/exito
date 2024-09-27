@@ -1,157 +1,7 @@
 import streamlit as st
 import requests
 from urllib.parse import urlparse
-import matplotlib.pyplot as plt
 import re
-from io import BytesIO
-
-# ============================================
-# Funciones Auxiliares
-# ============================================
-
-def parse_number(text):
-    """
-    Función para parsear números con diferentes formatos.
-    Convierte cadenas de texto a números flotantes.
-    """
-    text = re.sub(r'[^\d.,]', '', text)
-    if text.count(',') > text.count('.'):
-        text = text.replace('.', '').replace(',', '.')
-    else:
-        text = text.replace(',', '')
-    try:
-        return float(text)
-    except ValueError:
-        return None
-
-@st.cache_data(show_spinner=False)
-def obtener_busqueda_serper(query, api_key):
-    """
-    Función para obtener resultados de búsqueda utilizando la API de Serper.
-    Retorna una lista de URLs encontradas en los resultados de búsqueda.
-    """
-    serper_url = "https://google.serper.dev/search"
-    headers_serper = {
-        "X-API-KEY": api_key,
-        "Content-Type": "application/json"
-    }
-    data_serper = {"q": query}
-    response_serper = requests.post(serper_url, headers=headers_serper, json=data_serper, timeout=10)
-    response_serper.raise_for_status()
-    search_results = response_serper.json()
-    urls = []
-    if "organic" in search_results:
-        for item in search_results["organic"]:
-            if "link" in item:
-                urls.append(item["link"])
-    return urls if urls else []
-
-@st.cache_data(show_spinner=False)
-def obtener_analisis_together(search_summary, api_key):
-    """
-    Función para obtener análisis detallado utilizando la API de Together.
-    Retorna el contenido del análisis.
-    """
-    together_url = "https://api.together.xyz/v1/chat/completions"
-    headers_together = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "Eres un experto en análisis de plataformas digitales con un enfoque en las demandas del mercado actual. "
-                "Proporciona una evaluación detallada del potencial de éxito de la plataforma digital basada en la siguiente información. "
-                "Incluye recomendaciones sobre aspectos de forma (diseño, usabilidad, interfaz) y fondo (funcionalidades, contenido, estrategia de mercado), señalando lo que sobra y lo que falta. "
-                "Además, expresa el potencial de éxito en términos de porcentaje, proporciona una estimación del máximo de visitantes al día y un resumen ejecutivo de los hallazgos clave."
-                "\n\n"
-                "Nota: La estimación de visitantes diarios se basa en la versión mejorada de la plataforma, incorporando los cambios sugeridos."
-            )
-        },
-        {
-            "role": "user",
-            "content": f"Aquí hay información sobre la plataforma: {search_summary}"
-        }
-    ]
-    data_together = {
-        "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-        "messages": messages,
-        "max_tokens": 2512,
-        "temperature": 0.7,
-        "top_p": 0.7,
-        "top_k": 50,
-        "repetition_penalty": 1,
-        "stop": ["<|eot_id|>"],
-        "stream": False
-    }
-
-    response_together = requests.post(together_url, headers=headers_together, json=data_together, timeout=30)
-    response_together.raise_for_status()
-    analysis = response_together.json()
-    if "choices" in analysis and len(analysis["choices"]) > 0:
-        return analysis["choices"][0]["message"]["content"]
-    else:
-        raise ValueError("Respuesta inesperada de Together API.")
-
-def generar_graficas(secciones):
-    """
-    Función para generar las gráficas necesarias basadas en las secciones del análisis.
-    Retorna un diccionario con el título de la sección y el buffer de la imagen.
-    """
-    plots = {}
-    # Potencial de Éxito
-    if "Potencial de Éxito" in secciones:
-        porcentaje_val = parse_number(secciones["Potencial de Éxito"])
-        if porcentaje_val is not None:
-            fig, ax = plt.subplots(figsize=(2, 2))
-            ax.pie([porcentaje_val, 100 - porcentaje_val], colors=['#4CAF50', '#CCCCCC'], startangle=90, counterclock=False)
-            ax.axis('equal')
-            buf = BytesIO()
-            plt.savefig(buf, format='png', bbox_inches='tight')
-            plt.close(fig)
-            buf.seek(0)
-            plots["Potencial de Éxito"] = buf
-
-    # Estimación de Visitantes Diarios
-    if "Estimación de Visitantes Diarios" in secciones:
-        est_visitors_val = parse_number(secciones["Estimación de Visitantes Diarios"])
-        if est_visitors_val is not None:
-            est_visitors_val = int(est_visitors_val)
-            fig, ax = plt.subplots(figsize=(4, 1))
-            ax.barh([''], [est_visitors_val], color='#4CAF50')
-            ax.set_xlim(0, est_visitors_val * 1.2)
-            ax.set_xlabel('Número de Visitantes')
-            ax.set_yticks([])
-            plt.tight_layout()
-            buf = BytesIO()
-            plt.savefig(buf, format='png', bbox_inches='tight')
-            plt.close(fig)
-            buf.seek(0)
-            plots["Estimación de Visitantes Diarios"] = buf
-
-    return plots
-
-def extraer_subdominios(domain, serper_api_key):
-    """
-    Función para extraer subdominios utilizando la API de Serper.
-    Retorna una lista de subdominios únicos.
-    """
-    query = f"site:{domain}"
-    urls = obtener_busqueda_serper(query, serper_api_key)
-    subdominios_unicos = set()
-
-    for url in urls:
-        parsed_url = urlparse(url)
-        subdomain = parsed_url.netloc
-        if subdomain and subdomain != domain:
-            subdominios_unicos.add(subdomain)
-
-    return list(subdominios_unicos)
-
-# ============================================
-# Aplicación Streamlit
-# ============================================
 
 def main():
     # Título de la aplicación
@@ -294,6 +144,8 @@ def main():
                                     st.markdown("""
                                     **¿Cómo se estima el número máximo de visitantes diarios?**
                                     """)
-    # Mover el bloque fuera de la función main
+            except Exception as e:
+                st.error(f"❌ Se produjo un error inesperado: {str(e)}")
+
 if __name__ == "__main__":
     main()

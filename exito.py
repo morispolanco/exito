@@ -162,9 +162,6 @@ def main():
                 st.error("⚠️ URL inválida. Por favor, intenta nuevamente.")
                 st.stop()
 
-            # Mostrar la URL que se analizará
-            st.write(f"**URL a analizar:** {url_input}")
-
             try:
                 response = requests.get(url_input, timeout=10)
                 response.raise_for_status()
@@ -280,15 +277,3 @@ def main():
     # Ejecutar la aplicación
     if __name__ == "__main__":
         main()
-    ```
-
-### 6. **Explicación de las Modificaciones Realizadas**
-
-#### a. **Visualización de la URL a Analizar**
-
-- **Propósito:** Confirmar visualmente al usuario qué URL está siendo analizada para evitar confusiones.
-
-- **Implementación:**
-
-  ```python
-  st.write(f"**URL a analizar:** {url_input}")
